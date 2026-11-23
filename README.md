@@ -2,14 +2,16 @@
 
 Wizardric is a simulated banking demo. The Java port starts from
 [bank-ledger-go at `1c90c25`](https://github.com/ericlelirzin/bank-ledger-go/tree/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302).
-This milestone provides the Java migration command and carries forward the
-PostgreSQL schema and React dashboard. The dashboard's API and settlement worker
-are currently provided by the Go reference application.
+The Java backend includes the migration command and the core ledger for account
+reads, double-entry postings, and internal transfers. The React dashboard and
+PostgreSQL schema come from the Go repository. The dashboard's API and settlement
+worker currently run on Go.
 
 ## Verify the build
 
 Install JDK 21 and start Docker. The Maven Wrapper builds the Java app, and
-Testcontainers runs the migration suite against a disposable PostgreSQL database.
+Testcontainers runs the migration and ledger suites against disposable PostgreSQL
+databases.
 
 ```sh
 ./mvnw verify
@@ -37,10 +39,15 @@ The four SQL migrations are the original Go files. The Java runner shares Go's
 migrations and records their versions in one transaction. Keep applied
 migration files fixed and make future schema changes in new migration files.
 
-## Next milestone
+## Ledger behavior
 
-Port account reads, double-entry posting, and internal transfers. Start
-with Go's posting tests and verify that retries can find journals written
-by either implementation.
+The [ledger store](src/main/java/dev/lelirzin/bankledger/ledger/LedgerStore.java)
+uses integer minor units and one transaction per posting. It locks affected
+accounts in ascending ID order and applies increases before decreases. PostgreSQL
+updates balances and validates journals at commit. A retry with the same key and
+request returns the original journal, including when Go wrote it. A changed
+request using that key is a conflict.
+
+The next milestone ports simulated funding and the outgoing transfer worker.
 
 Licensed under the [MIT License](LICENSE).
