@@ -16,7 +16,7 @@ public final class LedgerException extends RuntimeException {
 
     private final Reason reason;
 
-    LedgerException(Reason reason) {
+    public LedgerException(Reason reason) {
         super(reason.message);
         this.reason = reason;
     }
