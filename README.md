@@ -2,9 +2,10 @@
 
 Wizardric is a simulated banking demo. The Java port starts from
 [bank-ledger-go at `1c90c25`](https://github.com/ericlelirzin/bank-ledger-go/tree/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302).
-The Java backend includes the core ledger, simulated funding, outgoing transfer
-reservations, and a settlement worker. The React dashboard and PostgreSQL schema
-come from the Go repository. The dashboard still uses the Go HTTP API.
+The Java backend serves the React dashboard's banking and ledger API. It supports
+simulated funding, saved recipients, outgoing transfers, and transfer timelines.
+A separate Java worker settles payments against the simulated bank. The React
+dashboard and PostgreSQL schema come from the Go repository.
 
 ## Verify the build
 
@@ -19,6 +20,40 @@ POSTGRES_MAJOR=18 ./mvnw verify
 
 PostgreSQL 17 is the default for local tests. CI tests both versions.
 For the dashboard build, use Node.js 22 and run `npm ci` and `npm run build` in `web/`.
+
+## Run the dashboard locally
+
+With Docker running, start a development database. If you already have a Go demo
+database running, you can use it in place of a new one.
+
+```sh
+docker run --rm -d --name wizardric-postgres -p 127.0.0.1:5432:5432 \
+  -e POSTGRES_DB=ledger -e POSTGRES_USER=ledger -e POSTGRES_PASSWORD=ledger \
+  postgres:17-bookworm
+docker exec wizardric-postgres pg_isready -U ledger -d ledger
+./mvnw package -DskipTests
+SERVER_ADDRESS=127.0.0.1 java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar serve
+```
+
+In a second terminal, run the settlement worker against the same database.
+
+```sh
+java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar worker
+```
+
+In a third terminal, run `npm ci` and `npm run dev` from `web/`, then open
+<http://localhost:5173>. Vite proxies `/api` to Java at `http://127.0.0.1:8080`.
+Use `BANK_API_URL` when the API runs at a different address. The dashboard seeds a
+fictional account on first load. Send a payment to a saved recipient, then open
+it in Transactions to see the settlement timeline and ledger entries.
+
+The API and worker apply migrations on startup. Use the datasource variables
+below to connect either process to a different database. The worker polls every
+500 ms and needs two database connections per active worker. It can retry local
+settlement using a receipt already recorded by the simulated bank.
+
+This API is for the local demo. A public deployment needs account authorization,
+isolated visitor sessions, and private raw ledger routes.
 
 ## Run the migrations
 
@@ -47,28 +82,10 @@ updates balances and validates journals at commit. A retry with the same key and
 request returns the original journal, including when Go wrote it. A changed
 request using that key is a conflict.
 
-## Run the Java settlement worker
-
-In the Go checkout, run `docker compose up --build db app` to start the database
-and Go API. Build the Java JAR and run the worker against the same database.
-Use the datasource variables shown above when the database differs from the
-default development instance.
-
-```sh
-java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar worker
-```
-
-The worker applies migrations on startup and polls for pending transfers every
-500 ms. It claims transfers with PostgreSQL row locks and requires two available
-database connections per active worker. If local settlement fails after the
-simulated bank records its receipt, the next attempt uses that receipt to settle
-the original transfer.
-
-For the demo, fund 10,000 cents and reserve 2,500 cents through the Go API. A
-pending transfer leaves 10,000 posted, 7,500 available, and 2,500 reserved.
-After the Java worker settles it, posted and available are both 7,500 and
-reserved is zero.
-
-The next milestone ports beneficiary management, history, and the HTTP API.
+The original [banking API](https://github.com/ericlelirzin/bank-ledger-go/blob/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302/docs/banking.md)
+and [ledger API](https://github.com/ericlelirzin/bank-ledger-go/blob/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302/docs/ledger-reference.md)
+describe the wire format. Java uses Spring Boot settings for HTTP and connection
+pool timeouts and PostgreSQL settings for statement and lock timeouts. Go's
+whole-handler `REQUEST_TIMEOUT` remains unported.
 
 Licensed under the [MIT License](LICENSE).

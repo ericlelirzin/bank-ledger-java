@@ -17,6 +17,8 @@ import java.util.concurrent.TimeUnit;
 
 import dev.lelirzin.bankledger.banking.BankingStore;
 import dev.lelirzin.bankledger.banking.BankingStore.Account;
+import dev.lelirzin.bankledger.banking.BankingStore.BeneficiaryRequest;
+import dev.lelirzin.bankledger.banking.BankingStore.Event;
 import dev.lelirzin.bankledger.banking.BankingStore.TransferRequest;
 import dev.lelirzin.bankledger.ledger.LedgerException;
 import dev.lelirzin.bankledger.ledger.LedgerStore;
@@ -115,11 +117,16 @@ class BankingStoreTest {
         assertThat(banking.transfer(pending.id())).isEqualTo(pending);
         assertThat(banking.account(accountId).reservedBalance()).isEqualTo(2_500);
         assertThat(journalCount()).isEqualTo(2);
+        var eventsAfterFailure = banking.timeline(pending.id()).events();
+        assertThat(eventsAfterFailure).extracting(Event::kind)
+                .containsExactly("transfer_created", "funds_reserved", "bank_confirmed");
+        assertThat(eventsAfterFailure.getLast().providerReference()).isEqualTo(pending.id());
 
         jdbc.execute("DROP TRIGGER reject_settlement ON outgoing_transfers");
         assertThat(concurrently(banking::processOne, banking::processOne)).containsExactlyInAnyOrder(true, false);
         assertThat(receipt(pending.id())).isEqualTo(originalReceipt);
         assertThat(banking.transfer(pending.id()).status()).isEqualTo("settled");
+        assertThat(banking.timeline(pending.id()).events().subList(0, 3)).isEqualTo(eventsAfterFailure);
         assertThat(banking.account(accountId)).isEqualTo(new Account(accountId, "Demo", "USD", 7_500, 7_500, 0));
         assertThat(journalCount()).isEqualTo(3);
     }
@@ -162,6 +169,17 @@ class BankingStoreTest {
         assertThat(banking.createTransfer(request)).isEqualTo(transfer);
         assertThat(assertThrows(LedgerException.class, () -> banking.createTransfer(
                 new TransferRequest("send", accountId, "SIM-RECIPIENT", null, 100))).reason()).isEqualTo(IDEMPOTENCY_CONFLICT);
+    }
+
+    @Test
+    void concurrentBeneficiaryRequestsReplayOneRecord() throws Exception {
+        long accountId = banking.open("Demo").id();
+        var request = new BeneficiaryRequest("recipient", "Sample Recipient", "SIM-RECIPIENT");
+        var attempts = concurrently(() -> banking.createBeneficiary(accountId, request),
+                () -> banking.createBeneficiary(accountId, request));
+
+        assertThat(attempts.getFirst()).isEqualTo(attempts.getLast());
+        assertThat(banking.beneficiaries(accountId, 0, 50).items()).containsExactly(attempts.getFirst());
     }
 
     private long fundedAccount() {

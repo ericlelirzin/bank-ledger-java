@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -38,14 +39,15 @@ public class LedgerStore {
 
     public record Entry(long accountId, String side, long amount) {}
 
-    public record Posting(String key, String description, List<Entry> entries) {
+    public record Posting(@JsonProperty("idempotency_key") String key, String description, List<Entry> entries) {
         public Posting {
             description = Objects.requireNonNullElse(description, "");
             entries = entries == null ? List.of() : List.copyOf(entries);
         }
     }
 
-    public record Transfer(String key, long fromAccountId, long toAccountId, long amount) {}
+    public record Transfer(@JsonProperty("idempotency_key") String key, long fromAccountId, long toAccountId,
+                           long amount) {}
 
     public record Result(long journalId, boolean replayed) {}
 
