@@ -13,7 +13,7 @@ import java.util.stream.StreamSupport;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import bankledger.banking.BankingStore;
+import bankledger.banking.SettlementStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,7 +46,7 @@ class ApiIntegrationTest {
     private ObjectMapper mapper;
 
     @Autowired
-    private BankingStore banking;
+    private SettlementStore settlement;
 
     @Test
     void exposesBankingLifecycleAndCursorPages() throws Exception {
@@ -107,7 +107,7 @@ class ApiIntegrationTest {
         assertThat(kinds(waiting)).containsExactly("transfer_created", "funds_reserved");
         assertThat(waiting.path("events").get(0).has("journal_id")).isFalse();
 
-        assertThat(banking.processOne()).isTrue();
+        assertThat(settlement.processOne()).isTrue();
         var timeline = get(transfer + "/timeline", 200);
         assertThat(timeline.path("transfer_id").longValue()).isEqualTo(transferId);
         assertThat(kinds(timeline)).containsExactly("transfer_created", "funds_reserved", "bank_confirmed", "transfer_settled");

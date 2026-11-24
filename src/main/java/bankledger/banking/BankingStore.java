@@ -77,8 +77,6 @@ public class BankingStore {
 
     private record BackingAccounts(long cash, long available, long reserved) {}
 
-    private record Receipt(String destination, long amount) {}
-
     private final JdbcTemplate jdbc;
     private final LedgerStore ledger;
     private final TransactionTemplate transaction;
@@ -230,45 +228,6 @@ public class BankingStore {
             throw new LedgerException(NOT_FOUND);
         }
         return new Timeline(id, events);
-    }
-
-    public boolean processOne() {
-        return transaction.execute(status -> {
-            var pending = jdbc.query("SELECT " + TRANSFER_COLUMNS + """
-                    FROM outgoing_transfers WHERE status = 'pending' ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1
-                    """, BankingStore::readTransfer);
-            if (pending.isEmpty()) {
-                return false;
-            }
-
-            var transfer = pending.getFirst();
-            acceptAtSimulatedBank(transfer);
-            var accounts = backingAccounts(transfer.accountId());
-            var journal = ledger.postInTransaction(new Posting("bank:settle:" + transfer.id(), "Settle outgoing transfer",
-                    List.of(new Entry(accounts.reserved(), "debit", transfer.amount()),
-                            new Entry(accounts.cash(), "credit", transfer.amount()))));
-            jdbc.update("""
-                    UPDATE outgoing_transfers SET status = 'settled', settlement_journal_id = ?,
-                    settled_at = clock_timestamp() WHERE id = ?
-                    """, journal.journalId(), transfer.id());
-            return true;
-        });
-    }
-
-    private void acceptAtSimulatedBank(Transfer transfer) {
-        // A separate connection makes the receipt durable even if local settlement rolls back.
-        transaction.executeWithoutResult(status -> {
-            jdbc.update("""
-                    INSERT INTO simulated_bank_receipts(transfer_id, destination, amount)
-                    VALUES (?, ?, ?) ON CONFLICT DO NOTHING
-                    """, transfer.id(), transfer.destination(), transfer.amount());
-            var receipt = jdbc.queryForObject("""
-                    SELECT destination, amount FROM simulated_bank_receipts WHERE transfer_id = ?
-                    """, (row, index) -> new Receipt(row.getString("destination"), row.getLong("amount")), transfer.id());
-            if (!transfer.destination().equals(receipt.destination()) || transfer.amount() != receipt.amount()) {
-                throw new LedgerException(IDEMPOTENCY_CONFLICT);
-            }
-        });
     }
 
     private Transfer replayTransfer(TransferRequest request, String destination) {

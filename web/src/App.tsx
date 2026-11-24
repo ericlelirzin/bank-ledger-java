@@ -5,9 +5,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
-  BankError, dateLabel, getDashboard, getJournal, getTimeline, money, parseAmount, sendPayment,
+  BankError, dateLabel, getDashboard, getJournal, getTimeline, parseIntegerJson, sendPayment, stringifyIntegerJson,
   type Activity, type Dashboard, type Journal, type Payment, type TimelineEvent,
 } from './bank'
+import { amountInput, money, parseAmount } from './money'
 
 const navigation = [
   { label: 'Home', path: 'home', icon: House },
@@ -79,8 +80,8 @@ function AccountCard({ account }: { account: Dashboard['account'] }) {
 
 function ActivitySymbol({ activity }: { activity: Activity }) {
   const Icon = activity.category === 'Housing' ? Building2 : activity.category === 'Bills' ? Zap
-    : activity.amount > 0 ? ArrowDownLeft : ArrowUpRight
-  return <span className={'row-icon ' + (activity.amount > 0 ? 'incoming' : '')}><Icon size={18} strokeWidth={1.7} /></span>
+    : activity.amount > 0n ? ArrowDownLeft : ArrowUpRight
+  return <span className={'row-icon ' + (activity.amount > 0n ? 'incoming' : '')}><Icon size={18} strokeWidth={1.7} /></span>
 }
 
 function ActivityList({ activity, onSelect }: { activity: Activity[]; onSelect: (key: string) => void }) {
@@ -94,7 +95,7 @@ function ActivityList({ activity, onSelect }: { activity: Activity[]; onSelect: 
             <span className="row-name"><strong>{row.name}</strong><small>{row.category}</small></span>
             <span className="row-date">{dateLabel(row.date)}</span>
             <span className="row-value">
-              <strong className={row.amount > 0 ? 'positive' : ''}>{row.amount > 0 ? '+' : '−'}{money(Math.abs(row.amount))}</strong>
+              <strong className={row.amount > 0n ? 'positive' : ''}>{row.amount > 0n ? '+' : '−'}{money(row.amount > 0n ? row.amount : -row.amount)}</strong>
               {row.status === 'pending' && <small className="pending">Pending</small>}
             </span>
             <ChevronRight size={15} className="row-chevron" />
@@ -110,9 +111,9 @@ function CashFlow({ activity, expanded = false }: { activity: Activity[]; expand
   const start = new Date()
   start.setDate(start.getDate() - days)
   const recent = activity.filter((row) => row.status === 'settled' && new Date(row.date) >= start)
-  const incoming = recent.reduce((total, row) => total + Math.max(0, row.amount), 0)
-  const outgoing = recent.reduce((total, row) => total + Math.max(0, -row.amount), 0)
-  const largest = Math.max(incoming, outgoing, 1)
+  const incoming = recent.reduce((total, row) => total + (row.amount > 0n ? row.amount : 0n), 0n)
+  const outgoing = recent.reduce((total, row) => total + (row.amount < 0n ? -row.amount : 0n), 0n)
+  const largest = (incoming > outgoing ? incoming : outgoing) || 1n
   return (
     <section className="panel cashflow">
       <div className="section-header">
@@ -124,7 +125,7 @@ function CashFlow({ activity, expanded = false }: { activity: Activity[]; expand
       {([{ label: 'Money in', amount: incoming, icon: ArrowDownToLine, tone: 'in' }, { label: 'Money out', amount: outgoing, icon: ArrowUpRight, tone: 'out' }]).map(({ label, amount, icon: Icon, tone }) => (
         <div className="cashflow-line" key={tone}>
           <div className="cashflow-label"><span><Icon size={16} />{label}</span><strong>{money(amount)}</strong></div>
-          <div className={'bar ' + tone} aria-hidden="true"><div style={{ width: amount / largest * 100 + '%' }} /></div>
+          <div className={'bar ' + tone} aria-hidden="true"><div style={{ width: Number(amount * 10_000n / largest) / 100 + '%' }} /></div>
         </div>
       ))}
       <div className="cashflow-footer"><span>Net movement</span><strong>{money(incoming - outgoing)}</strong></div>
@@ -137,7 +138,7 @@ function Transactions({ activity, onSelect }: { activity: Activity[]; onSelect: 
   const [direction, setDirection] = useState('all')
   const filtered = activity.filter((row) =>
     (row.name + ' ' + row.category).toLowerCase().includes(query.trim().toLowerCase())
-    && (direction === 'all' || (direction === 'in' ? row.amount > 0 : row.amount < 0)),
+    && (direction === 'all' || (direction === 'in' ? row.amount > 0n : row.amount < 0n)),
   )
   return (
     <section className="panel transaction-panel">
@@ -210,8 +211,11 @@ function Details({ activity, onClose }: { activity: Activity; onClose: () => voi
 function SendDialog({ dashboard, pending, submit, onClose }: {
   dashboard: Dashboard; pending: Payment | null; submit: (payment: Payment) => Promise<void>; onClose: () => void
 }) {
-  const [recipient, setRecipient] = useState(pending?.beneficiary_id ?? dashboard.recipients.find(({ name }) => name === 'Alex Morgan')?.id ?? dashboard.recipients[0]?.id)
-  const [amount, setAmount] = useState(pending ? (pending.amount / 100).toFixed(2) : '25.00')
+  const defaultRecipient = pending?.beneficiary_id
+    ?? dashboard.recipients.find(({ name }) => name === 'Alex Morgan')?.id
+    ?? dashboard.recipients[0]?.id
+  const [recipient, setRecipient] = useState(defaultRecipient?.toString() ?? '')
+  const [amount, setAmount] = useState(pending ? amountInput(pending.amount) : '25.00')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submitForm(event: FormEvent<HTMLFormElement>) {
@@ -227,7 +231,7 @@ function SendDialog({ dashboard, pending, submit, onClose }: {
       return
     }
     const payment = pending ?? {
-      account_id: dashboard.account.id, beneficiary_id: recipient!, amount: cents!, idempotency_key: crypto.randomUUID(),
+      account_id: dashboard.account.id, beneficiary_id: BigInt(recipient), amount: cents!, idempotency_key: crypto.randomUUID(),
     }
     setBusy(true)
     setError('')
@@ -244,8 +248,8 @@ function SendDialog({ dashboard, pending, submit, onClose }: {
       <form className="payment-form" onSubmit={(event) => void submitForm(event)}>
         <label>From <span>Everyday · {money(dashboard.account.available_balance)} available</span></label>
         <label>To
-          <select disabled={busy || !!pending} value={recipient ?? ''} onChange={(event) => setRecipient(Number(event.target.value))}>
-            {dashboard.recipients.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+          <select disabled={busy || !!pending} value={recipient} onChange={(event) => setRecipient(event.target.value)}>
+            {dashboard.recipients.map((person) => <option key={person.id} value={String(person.id)}>{person.name}</option>)}
           </select>
         </label>
         <label>Amount in USD<input inputMode="decimal" disabled={busy || !!pending} value={amount} onChange={(event) => setAmount(event.target.value)} /></label>
@@ -265,7 +269,7 @@ export function App() {
   const [sending, setSending] = useState(false)
   const [pending, setPending] = useState<Payment | null>(() => {
     const saved = sessionStorage.getItem(pendingKey)
-    return saved ? JSON.parse(saved) : null
+    return saved ? parseIntegerJson<Payment>(saved) : null
   })
   const refreshSequence = useRef(0)
 
@@ -303,7 +307,7 @@ export function App() {
       setPending(null)
       throw new Error('This payment belongs to a previous demo account. Open a new payment to continue.')
     }
-    sessionStorage.setItem(pendingKey, JSON.stringify(payment))
+    sessionStorage.setItem(pendingKey, stringifyIntegerJson(payment))
     setPending(payment)
     let transfer
     try {

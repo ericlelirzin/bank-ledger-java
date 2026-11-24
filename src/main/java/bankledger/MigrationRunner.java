@@ -15,7 +15,8 @@ import org.springframework.stereotype.Component;
 final class MigrationRunner {
 
     private static final List<String> MIGRATIONS = List.of(
-            "001_ledger.sql", "002_reliability.sql", "003_banking.sql", "004_beneficiaries.sql");
+            "001_ledger.sql", "002_reliability.sql", "003_banking.sql", "004_beneficiaries.sql",
+            "005_settlement_retries.sql");
 
     private final DataSource dataSource;
 

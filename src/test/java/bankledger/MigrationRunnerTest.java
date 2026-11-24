@@ -52,7 +52,7 @@ class MigrationRunnerTest {
         runner.apply();
         runner.apply();
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
         try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
             connection.setAutoCommit(false);
             statement.executeUpdate("""
@@ -77,19 +77,21 @@ class MigrationRunnerTest {
 
         runner.apply();
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
         assertThat(jdbc.queryForList(
                 "SELECT id, idempotency_key, encode(request_hash, 'hex') AS hash FROM journals ORDER BY id"))
                 .isEqualTo(originalJournals);
         assertThat(jdbc.queryForList("SELECT balance FROM accounts ORDER BY id", Long.class))
                 .containsExactly(10_000L, 7_500L, 2_500L);
         assertThat(jdbc.queryForMap("""
-                SELECT id, status, reserve_journal_id, beneficiary_id
+                SELECT id, status, reserve_journal_id, beneficiary_id,
+                       next_attempt_at <= clock_timestamp() AS eligible
                 FROM outgoing_transfers WHERE id = 1
                 """)).containsEntry("id", 1L)
                 .containsEntry("status", "pending")
                 .containsEntry("reserve_journal_id", 2L)
-                .containsEntry("beneficiary_id", null);
+                .containsEntry("beneficiary_id", null)
+                .containsEntry("eligible", true);
     }
 
     @Test
@@ -111,7 +113,7 @@ class MigrationRunnerTest {
             second.get(15, TimeUnit.SECONDS);
         }
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
     }
 
     @Test
@@ -126,7 +128,7 @@ class MigrationRunnerTest {
 
         jdbc.execute("DROP TABLE beneficiaries");
         runner.apply();
-        assertThat(versions()).containsExactly(1, 2, 3, 4);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
     }
 
     private List<Integer> versions() {

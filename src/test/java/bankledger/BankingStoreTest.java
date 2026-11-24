@@ -20,6 +20,7 @@ import bankledger.banking.BankingStore.Account;
 import bankledger.banking.BankingStore.BeneficiaryRequest;
 import bankledger.banking.BankingStore.Event;
 import bankledger.banking.BankingStore.TransferRequest;
+import bankledger.banking.SettlementStore;
 import bankledger.ledger.LedgerException;
 import bankledger.ledger.LedgerStore;
 import bankledger.ledger.LedgerStore.Result;
@@ -43,6 +44,7 @@ class BankingStoreTest {
 
     private JdbcTemplate jdbc;
     private BankingStore banking;
+    private SettlementStore settlement;
 
     @BeforeEach
     void createBankingStore() throws Exception {
@@ -58,12 +60,14 @@ class BankingStoreTest {
         new MigrationRunner(dataSource).apply();
 
         var manager = new JdbcTransactionManager(dataSource);
-        banking = new BankingStore(jdbc, new LedgerStore(jdbc, manager), manager);
+        var ledger = new LedgerStore(jdbc, manager);
+        banking = new BankingStore(jdbc, ledger, manager);
+        settlement = new SettlementStore(jdbc, ledger, manager);
     }
 
     @Test
     void fundsReservesAndSettlesWithReplayProtection() {
-        assertThat(banking.processOne()).isFalse();
+        assertThat(settlement.processOne()).isFalse();
         var account = banking.open("Demo");
         assertThat(account).isEqualTo(new Account(account.id(), "Demo", "USD", 0, 0, 0));
 
@@ -85,14 +89,14 @@ class BankingStoreTest {
                 .isEqualTo(IDEMPOTENCY_CONFLICT);
         assertThat(banking.account(account.id())).isEqualTo(new Account(account.id(), "Demo", "USD", 10_000, 7_500, 2_500));
 
-        assertThat(banking.processOne()).isTrue();
+        assertThat(settlement.processOne()).isTrue();
         var settled = banking.transfer(pending.id());
         assertThat(settled.status()).isEqualTo("settled");
         assertThat(settled.reserveJournalId()).isEqualTo(pending.reserveJournalId());
         assertThat(settled.settlementJournalId()).isNotNull();
         assertThat(settled.settledAt()).isNotNull();
         assertThat(banking.createTransfer(request)).isEqualTo(settled);
-        assertThat(banking.processOne()).isFalse();
+        assertThat(settlement.processOne()).isFalse();
         assertThat(banking.account(account.id())).isEqualTo(new Account(account.id(), "Demo", "USD", 7_500, 7_500, 0));
         assertThat(journalCount()).isEqualTo(3);
         assertThat(receipt(settled.id())).containsEntry("destination", "SIM-DESTINATION").containsEntry("amount", 2_500L);
@@ -112,7 +116,7 @@ class BankingStoreTest {
                 FOR EACH ROW WHEN (NEW.status = 'settled') EXECUTE FUNCTION reject_settlement();
                 """);
 
-        assertThat(sqlState(assertThrows(DataAccessException.class, banking::processOne))).isEqualTo("23514");
+        assertThat(sqlState(assertThrows(DataAccessException.class, settlement::processOne))).isEqualTo("23514");
         var originalReceipt = receipt(pending.id());
         assertThat(banking.transfer(pending.id())).isEqualTo(pending);
         assertThat(banking.account(accountId).reservedBalance()).isEqualTo(2_500);
@@ -122,13 +126,48 @@ class BankingStoreTest {
                 .containsExactly("transfer_created", "funds_reserved", "bank_confirmed");
         assertThat(eventsAfterFailure.getLast().providerReference()).isEqualTo(pending.id());
 
+        assertThat(settlement.processOne()).isFalse();
         jdbc.execute("DROP TRIGGER reject_settlement ON outgoing_transfers");
-        assertThat(concurrently(banking::processOne, banking::processOne)).containsExactlyInAnyOrder(true, false);
+        makeRetryDue(pending.id());
+        assertThat(concurrently(settlement::processOne, settlement::processOne)).containsExactlyInAnyOrder(true, false);
         assertThat(receipt(pending.id())).isEqualTo(originalReceipt);
         assertThat(banking.transfer(pending.id()).status()).isEqualTo("settled");
         assertThat(banking.timeline(pending.id()).events().subList(0, 3)).isEqualTo(eventsAfterFailure);
         assertThat(banking.account(accountId)).isEqualTo(new Account(accountId, "Demo", "USD", 7_500, 7_500, 0));
         assertThat(journalCount()).isEqualTo(3);
+    }
+
+    @Test
+    void backsOffAFailingTransferAndSettlesTheNextPayment() {
+        long firstAccount = fundedAccount();
+        long secondAccount = banking.open("Second demo").id();
+        banking.fund(secondAccount, 10_000, "fund-second");
+        var first = banking.createTransfer(new TransferRequest("first", firstAccount, "SIM-FIRST", null, 2_500));
+        var second = banking.createTransfer(new TransferRequest("second", secondAccount, "SIM-SECOND", null, 1_500));
+        jdbc.execute("""
+                CREATE FUNCTION reject_first_settlement() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                    RAISE EXCEPTION 'test persistent settlement failure' USING ERRCODE = '23514';
+                END $$;
+                CREATE CONSTRAINT TRIGGER reject_first_settlement
+                AFTER UPDATE ON outgoing_transfers DEFERRABLE INITIALLY DEFERRED
+                FOR EACH ROW WHEN (NEW.status = 'settled' AND NEW.destination = 'SIM-FIRST')
+                EXECUTE FUNCTION reject_first_settlement();
+                """);
+
+        assertThat(sqlState(assertThrows(DataAccessException.class, settlement::processOne))).isEqualTo("23514");
+        var originalReceipt = receipt(first.id());
+        assertThat(settlement.processOne()).isTrue();
+        assertThat(banking.transfer(first.id())).isEqualTo(first);
+        assertThat(banking.transfer(second.id()).status()).isEqualTo("settled");
+        assertThat(banking.account(secondAccount)).isEqualTo(new Account(secondAccount, "Second demo", "USD", 8_500, 8_500, 0));
+        assertThat(settlement.processOne()).isFalse();
+
+        makeRetryDue(first.id());
+        assertThat(sqlState(assertThrows(DataAccessException.class, settlement::processOne))).isEqualTo("23514");
+        assertThat(receipt(first.id())).isEqualTo(originalReceipt);
+        assertThat(banking.account(firstAccount)).isEqualTo(new Account(firstAccount, "Demo", "USD", 10_000, 7_500, 2_500));
+        assertThat(journalCount()).isEqualTo(5);
     }
 
     @Test
@@ -186,6 +225,10 @@ class BankingStoreTest {
         long id = banking.open("Demo").id();
         banking.fund(id, 10_000, "fund");
         return id;
+    }
+
+    private void makeRetryDue(long id) {
+        jdbc.update("UPDATE outgoing_transfers SET next_attempt_at = now() - interval '1 second' WHERE id = ?", id);
     }
 
     private long journalCount() {

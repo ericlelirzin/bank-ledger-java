@@ -8,6 +8,7 @@ PostgreSQL 17 and 18 are covered by the test matrix. The [migrations](src/main/r
 | [002 reliability](src/main/resources/db/migrations/002_reliability.sql) | Deferred validation queue for journals |
 | [003 banking](src/main/resources/db/migrations/003_banking.sql) | Product accounts, outgoing transfers, and simulator receipts |
 | [004 beneficiaries](src/main/resources/db/migrations/004_beneficiaries.sql) | Immutable beneficiaries, account-scoped transfer reference, and transfer history index |
+| [005 settlement retries](src/main/resources/db/migrations/005_settlement_retries.sql) | Durable retry times and the due-transfer index |
 
 ## Migrations
 
@@ -19,5 +20,5 @@ Preserve applied files and their order. For a schema change, add a forward SQL m
 
 - Raw ledger posting opens a read-committed transaction. Banking writes open their own read-committed transactions and use `postInTransaction` to include each journal and its balance changes in the caller's work.
 - Each product account points to three backing accounts in `accounts`. Cash is an asset with debit normal side. Available and reserved are liabilities with credit normal side. All three disallow overdraft. The product account read joins all three balances in one query.
-- A worker claims one pending row in ascending ID order with `FOR UPDATE SKIP LOCKED`. The receipt uses a separate transaction and connection while the first connection holds the claim. Budget two connections per active settlement. The outer transaction posts the settlement journal and records the final status.
+- A short transaction claims the next due pending transfer by retry time and ID with `FOR UPDATE SKIP LOCKED`, then advances its retry time by five seconds. Rows already pending at upgrade are due immediately. A separate settlement transaction rechecks and locks the pending row. While it holds that lock, the simulated bank receipt uses its own transaction and connection. Budget two connections per active settlement. The settlement transaction posts the journal and records the final status together.
 - Transfers keep a destination snapshot. The composite foreign key constrains a saved beneficiary to the originating bank account. The nullable reference supports direct-destination transfers and rows from before migration 004.
