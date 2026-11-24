@@ -5,6 +5,14 @@ accounts, simulated funding, saved recipients, payments, and transaction history
 A separate Java worker settles payments against a simulated bank. Transaction
 details show the settlement timeline and ledger entries.
 
+## Browse the code
+
+- [Banking](src/main/java/bankledger/banking) for accounts, payments, and settlement
+- [Ledger](src/main/java/bankledger/ledger) for journals and balances
+- [HTTP API](src/main/java/bankledger/http) for routes and request handling
+- [Database migrations](src/main/resources/db/migrations) and [integration tests](src/test/java/bankledger)
+- [Engineering handoff](AGENTS.md), [current state](STATE.md), and [architecture](ARCHITECTURE.md)
+
 ## Run locally
 
 Install JDK 21, Docker, and Node.js 22. Start a development database or use an

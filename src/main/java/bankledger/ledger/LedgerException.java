@@ -1,4 +1,4 @@
-package dev.lelirzin.bankledger.ledger;
+package bankledger.ledger;
 
 public final class LedgerException extends RuntimeException {
 

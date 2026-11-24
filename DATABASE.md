@@ -11,7 +11,7 @@ PostgreSQL 17 and 18 are covered by the test matrix. The [migrations](src/main/r
 
 ## Migrations
 
-[MigrationRunner](src/main/java/dev/lelirzin/bankledger/MigrationRunner.java) shares the Go `schema_migrations` table and transaction-scoped advisory lock `74209183`. It applies all pending files and records their versions in one read-committed transaction. A failure rolls back that run. `serve`, `worker`, and `migrate` all apply pending migrations at startup.
+[MigrationRunner](src/main/java/bankledger/MigrationRunner.java) shares the Go `schema_migrations` table and transaction-scoped advisory lock `74209183`. It applies all pending files and records their versions in one read-committed transaction. A failure rolls back that run. `serve`, `worker`, and `migrate` all apply pending migrations at startup.
 
 Preserve applied files and their order. For a schema change, add a forward SQL migration and append it to the runner's ordered list. Verify fresh setup and upgrade from a populated prior schema. See [README.md](README.md) for the migration command.
 

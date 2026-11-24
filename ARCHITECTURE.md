@@ -6,11 +6,11 @@ Wizardric is a local banking demo. React and TypeScript provide the dashboard. J
 | --- | --- |
 | Dashboard, payment form, and transaction details | [App.tsx](web/src/App.tsx) |
 | API calls, demo seeding, and history pagination | [bank.ts](web/src/bank.ts) |
-| Routes, strict JSON decoding, and error responses | [ApiController](src/main/java/dev/lelirzin/bankledger/http/ApiController.java), [ApiJson](src/main/java/dev/lelirzin/bankledger/http/ApiJson.java), and [ApiErrors](src/main/java/dev/lelirzin/bankledger/http/ApiErrors.java) |
-| Banking accounts, funding, beneficiaries, transfers, and timelines | [BankingStore](src/main/java/dev/lelirzin/bankledger/banking/BankingStore.java) |
-| Journal posting, balances, and internal ledger transfers | [LedgerStore](src/main/java/dev/lelirzin/bankledger/ledger/LedgerStore.java) |
-| Pending transfer polling | [SettlementWorker](src/main/java/dev/lelirzin/bankledger/banking/SettlementWorker.java) |
-| Process modes and migrations | [BankLedgerApplication](src/main/java/dev/lelirzin/bankledger/BankLedgerApplication.java) and [ApiDatabaseStartup](src/main/java/dev/lelirzin/bankledger/ApiDatabaseStartup.java). See [DATABASE.md](DATABASE.md) for the runner. |
+| Routes, strict JSON decoding, and error responses | [ApiController](src/main/java/bankledger/http/ApiController.java), [ApiJson](src/main/java/bankledger/http/ApiJson.java), and [ApiErrors](src/main/java/bankledger/http/ApiErrors.java) |
+| Banking accounts, funding, beneficiaries, transfers, and timelines | [BankingStore](src/main/java/bankledger/banking/BankingStore.java) |
+| Journal posting, balances, and internal ledger transfers | [LedgerStore](src/main/java/bankledger/ledger/LedgerStore.java) |
+| Pending transfer polling | [SettlementWorker](src/main/java/bankledger/banking/SettlementWorker.java) |
+| Process modes and migrations | [BankLedgerApplication](src/main/java/bankledger/BankLedgerApplication.java) and [ApiDatabaseStartup](src/main/java/bankledger/ApiDatabaseStartup.java). See [DATABASE.md](DATABASE.md) for the runner. |
 
 ## Follow a payment
 

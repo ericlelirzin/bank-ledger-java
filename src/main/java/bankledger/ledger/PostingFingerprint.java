@@ -1,4 +1,4 @@
-package dev.lelirzin.bankledger.ledger;
+package bankledger.ledger;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -6,8 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.StringJoiner;
 
-import dev.lelirzin.bankledger.ledger.LedgerStore.Posting;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Transfer;
+import bankledger.ledger.LedgerStore.Posting;
+import bankledger.ledger.LedgerStore.Transfer;
 
 final class PostingFingerprint {
 

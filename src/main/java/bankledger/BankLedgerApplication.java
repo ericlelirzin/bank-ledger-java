@@ -1,6 +1,6 @@
-package dev.lelirzin.bankledger;
+package bankledger;
 
-import dev.lelirzin.bankledger.banking.SettlementWorker;
+import bankledger.banking.SettlementWorker;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

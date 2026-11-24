@@ -11,10 +11,10 @@ The default is PostgreSQL 17. Use `./mvnw -Dtest=BankingStoreTest test` to focus
 
 | Suite | Coverage |
 | --- | --- |
-| [MigrationRunnerTest](src/test/java/dev/lelirzin/bankledger/MigrationRunnerTest.java) | Fresh and repeated setup, populated Go schema versions 3 and 4, concurrent migration, rollback, and a database commit guard |
-| [LedgerStoreTest](src/test/java/dev/lelirzin/bankledger/LedgerStoreTest.java) | Go fingerprint replay, entry ordering, 64-bit balance bounds, input validation, deferred rollback, and concurrent retries and overspending |
-| [BankingStoreTest](src/test/java/dev/lelirzin/bankledger/BankingStoreTest.java) | Funding, reserve and settle, beneficiary scoping and replay, competing reserves, and receipt recovery after a forced settlement commit failure |
-| [ApiIntegrationTest](src/test/java/dev/lelirzin/bankledger/ApiIntegrationTest.java) | Live HTTP routes and database startup, banking lifecycle, cursors, ledger writes, and strict JSON including signed 64-bit integers |
+| [MigrationRunnerTest](src/test/java/bankledger/MigrationRunnerTest.java) | Fresh and repeated setup, populated Go schema versions 3 and 4, concurrent migration, rollback, and a database commit guard |
+| [LedgerStoreTest](src/test/java/bankledger/LedgerStoreTest.java) | Go fingerprint replay, entry ordering, 64-bit balance bounds, input validation, deferred rollback, and concurrent retries and overspending |
+| [BankingStoreTest](src/test/java/bankledger/BankingStoreTest.java) | Funding, reserve and settle, beneficiary scoping and replay, competing reserves, and receipt recovery after a forced settlement commit failure |
+| [ApiIntegrationTest](src/test/java/bankledger/ApiIntegrationTest.java) | Live HTTP routes and database startup, banking lifecycle, cursors, ledger writes, and strict JSON including signed 64-bit integers |
 
 For a financial change, exercise the affected path through its normal entry point and assert committed balances, records, and retry behavior. Include rollback and concurrency when the change can affect them. Migration changes should exercise existing populated databases as well as fresh setup.
 

@@ -1,4 +1,4 @@
-package dev.lelirzin.bankledger.banking;
+package bankledger.banking;
 
 import java.time.Duration;
 

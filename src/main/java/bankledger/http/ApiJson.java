@@ -1,6 +1,6 @@
-package dev.lelirzin.bankledger.http;
+package bankledger.http;
 
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
+import static bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
-import dev.lelirzin.bankledger.ledger.LedgerException;
+import bankledger.ledger.LedgerException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.stereotype.Component;
 

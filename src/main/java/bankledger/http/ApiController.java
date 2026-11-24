@@ -1,6 +1,6 @@
-package dev.lelirzin.bankledger.http;
+package bankledger.http;
 
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
+import static bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
 
 import java.io.InputStream;
 import java.util.List;
@@ -9,9 +9,9 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.lelirzin.bankledger.banking.BankingStore;
-import dev.lelirzin.bankledger.ledger.LedgerException;
-import dev.lelirzin.bankledger.ledger.LedgerStore;
+import bankledger.banking.BankingStore;
+import bankledger.ledger.LedgerException;
+import bankledger.ledger.LedgerStore;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.jdbc.core.JdbcTemplate;

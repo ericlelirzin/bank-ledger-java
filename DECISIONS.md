@@ -2,7 +2,7 @@
 
 ## Preserve Go database and replay compatibility
 
-The migration uses the PostgreSQL schema, migration history, and journal fingerprint format from [bank-ledger-go at `1c90c25`](https://github.com/ericlelirzin/bank-ledger-go/tree/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302). Existing data and retries keep their original identities when Java takes over. Changing the serialized fields, their order, or escaping in [PostingFingerprint](src/main/java/dev/lelirzin/bankledger/ledger/PostingFingerprint.java) can invalidate a replay of a committed request. Keep the legacy fingerprint tests when changing posting code. See [DATABASE.md](DATABASE.md) for the migration strategy.
+The migration uses the PostgreSQL schema, migration history, and journal fingerprint format from [bank-ledger-go at `1c90c25`](https://github.com/ericlelirzin/bank-ledger-go/tree/1c90c258b3c2f9ad4d871c479f30fc3dbe61f302). Existing data and retries keep their original identities when Java takes over. Changing the serialized fields, their order, or escaping in [PostingFingerprint](src/main/java/bankledger/ledger/PostingFingerprint.java) can invalidate a replay of a committed request. Keep the legacy fingerprint tests when changing posting code. See [DATABASE.md](DATABASE.md) for the migration strategy.
 
 ## Keep money movement in explicit JDBC transactions
 

@@ -1,9 +1,9 @@
-package dev.lelirzin.bankledger.http;
+package bankledger.http;
 
 import java.sql.SQLException;
 import java.util.Map;
 
-import dev.lelirzin.bankledger.ledger.LedgerException;
+import bankledger.ledger.LedgerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;

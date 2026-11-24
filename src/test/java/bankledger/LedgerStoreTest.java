@@ -1,8 +1,8 @@
-package dev.lelirzin.bankledger;
+package bankledger;
 
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.NOT_FOUND;
+import static bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
+import static bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
+import static bankledger.ledger.LedgerException.Reason.NOT_FOUND;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -14,13 +14,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import dev.lelirzin.bankledger.ledger.LedgerException;
-import dev.lelirzin.bankledger.ledger.LedgerStore;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Account;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Entry;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Posting;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Result;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Transfer;
+import bankledger.ledger.LedgerException;
+import bankledger.ledger.LedgerStore;
+import bankledger.ledger.LedgerStore.Account;
+import bankledger.ledger.LedgerStore.Entry;
+import bankledger.ledger.LedgerStore.Posting;
+import bankledger.ledger.LedgerStore.Result;
+import bankledger.ledger.LedgerStore.Transfer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;

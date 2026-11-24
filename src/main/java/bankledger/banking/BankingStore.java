@@ -1,8 +1,8 @@
-package dev.lelirzin.bankledger.banking;
+package bankledger.banking;
 
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.NOT_FOUND;
+import static bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
+import static bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
+import static bankledger.ledger.LedgerException.Reason.NOT_FOUND;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,11 +19,11 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import dev.lelirzin.bankledger.ledger.LedgerException;
-import dev.lelirzin.bankledger.ledger.LedgerStore;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Entry;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Posting;
-import dev.lelirzin.bankledger.ledger.LedgerStore.Result;
+import bankledger.ledger.LedgerException;
+import bankledger.ledger.LedgerStore;
+import bankledger.ledger.LedgerStore.Entry;
+import bankledger.ledger.LedgerStore.Posting;
+import bankledger.ledger.LedgerStore.Result;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.PlatformTransactionManager;

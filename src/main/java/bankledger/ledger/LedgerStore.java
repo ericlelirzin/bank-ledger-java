@@ -1,8 +1,8 @@
-package dev.lelirzin.bankledger.ledger;
+package bankledger.ledger;
 
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
-import static dev.lelirzin.bankledger.ledger.LedgerException.Reason.NOT_FOUND;
+import static bankledger.ledger.LedgerException.Reason.IDEMPOTENCY_CONFLICT;
+import static bankledger.ledger.LedgerException.Reason.INVALID_REQUEST;
+import static bankledger.ledger.LedgerException.Reason.NOT_FOUND;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;

@@ -1,4 +1,4 @@
-package dev.lelirzin.bankledger;
+package bankledger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
