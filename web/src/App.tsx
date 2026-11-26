@@ -1,13 +1,15 @@
 import {
   Activity as ActivityIcon, ArrowDownLeft, ArrowDownToLine, ArrowRight, ArrowUpRight,
   Banknote, Building2, Check, ChevronRight, CircleAlert, CreditCard, House, Landmark, List,
-  LockKeyhole, Search, Send, Wallet, X, Zap,
+  LockKeyhole, Search, Send, Wallet, Zap,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   BankError, dateLabel, getDashboard, getJournal, getTimeline, parseIntegerJson, sendPayment, stringifyIntegerJson,
   type Activity, type Dashboard, type Journal, type Payment, type TimelineEvent,
 } from './bank'
+import { Cards } from './Cards'
+import { Dialog } from './Dialog'
 import { amountInput, money, parseAmount } from './money'
 
 const navigation = [
@@ -150,17 +152,6 @@ function Transactions({ activity, onSelect }: { activity: Activity[]; onSelect: 
       </div>
       <ActivityList activity={filtered} onSelect={onSelect} />
     </section>
-  )
-}
-
-function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  useEffect(() => { dialog.current?.showModal() }, [])
-  return (
-    <dialog ref={dialog} onCancel={onClose} aria-labelledby="dialog-title">
-      <div className="dialog-header"><h2 id="dialog-title">{title}</h2><button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button></div>
-      {children}
-    </dialog>
   )
 }
 
@@ -349,14 +340,10 @@ export function App() {
           </header>
           {loadError && <div className="notice" role="alert"><CircleAlert size={18} /><span>{loadError}</span><button onClick={() => void refresh()}>Retry</button></div>}
           {pending && !sending && <div className="notice" role="status"><CircleAlert size={18} /><span>A payment is awaiting confirmation.</span><button onClick={() => setSending(true)}>Check payment</button></div>}
-          {route === 'cards' ? (
-            <section className="panel cards-empty">
-              <span className="card-icon"><CreditCard size={34} strokeWidth={1.5} /></span>
-              <h2>Virtual cards are coming soon</h2>
-              <p>You’ll be able to view your cards and track card payments here.</p>
-            </section>
-          ) : !dashboard ? (
+          {!dashboard ? (
             !loadError && <section className="panel loading" role="status">Getting your account ready…</section>
+          ) : route === 'cards' ? (
+            <Cards key={String(dashboard.account.id)} accountId={dashboard.account.id} />
           ) : route === 'home' ? (
             <div className="dashboard-grid">
               <div className="dashboard-column">

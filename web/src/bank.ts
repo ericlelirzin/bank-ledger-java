@@ -85,9 +85,10 @@ export class BankError extends Error {
   }
 }
 
-async function request<T>(path: string, body?: object): Promise<T> {
+async function request<T>(path: string, body?: object, headers?: Record<string, string>): Promise<T> {
   const response = await fetch('/api' + path, {
-    ...(body && { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: stringifyIntegerJson(body) }),
+    headers: { ...headers, ...(body && { 'Content-Type': 'application/json' }) },
+    ...(body && { method: 'POST', body: stringifyIntegerJson(body) }),
     signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) {
@@ -225,3 +226,54 @@ export async function getDashboard(): Promise<Dashboard> {
 const shortDate = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 
 export const dateLabel = (date: string) => shortDate.format(new Date(date))
+
+export interface SandboxCard {
+  last_four_digits: string
+  status: 'active' | 'paused' | 'deactivated'
+}
+
+export interface CardOverview {
+  issuance_state: 'unconfigured' | 'available' | 'pending' | 'review' | 'issued'
+  card: SandboxCard | null
+  balance: { available_amount: bigint; holding_amount: bigint } | null
+}
+
+export interface CardActivity {
+  id: string
+  merchant: string | null
+  type: string
+  created_at: string
+  held_amount: bigint
+  settled_amount: bigint
+}
+
+interface CardActivityPage {
+  items: CardActivity[]
+  next_cursor: string | null
+}
+
+export interface CardActivityDetail {
+  transaction: CardActivity
+  events: {
+    type: string
+    created_at: string
+    decision: string | null
+    decision_reason: string | null
+    requested_amount: bigint | null
+    held_amount: bigint | null
+    settled_amount: bigint | null
+  }[]
+}
+
+function cardRequest<T>(accountId: bigint, path = '', body?: object) {
+  return request<T>(`/bank/accounts/${accountId}/cards${path}`, body, { 'X-Wizardric-Sandbox': 'cards' })
+}
+
+export const getCardOverview = (accountId: bigint) => cardRequest<CardOverview>(accountId)
+export const issueCard = (accountId: bigint) => cardRequest<CardOverview>(accountId, '/issue', {})
+export const setCardPaused = (accountId: bigint, paused: boolean) =>
+  cardRequest<SandboxCard>(accountId, paused ? '/pause' : '/resume', {})
+export const getCardActivity = (accountId: bigint, cursor?: string) =>
+  cardRequest<CardActivityPage>(accountId, '/activity' + (cursor ? '?after=' + encodeURIComponent(cursor) : ''))
+export const getCardActivityDetail = (accountId: bigint, id: string) =>
+  cardRequest<CardActivityDetail>(accountId, '/activity/' + encodeURIComponent(id))

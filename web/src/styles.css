@@ -158,3 +158,22 @@ dialog::backdrop { background: #10231d82; }
   .account-line { grid-template-columns: auto minmax(0, 1fr); }
   .account-value { grid-column: 2; }
 }
+
+.sandbox-card .section-header svg { color: var(--green); }
+.sandbox-card p { color: var(--muted); font-size: 13px; }
+.sandbox-card .card-digits { color: inherit; font-size: 27px; font-weight: 850; letter-spacing: .06em; }
+.sandbox-card .card-status { margin-top: 4px; }
+.sandbox-card .button, .card-more { margin-top: 14px; }
+.sandbox-balance dl { margin: 0; }
+.sandbox-balance dl div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px 12px; padding-block: 7px; }
+.sandbox-balance dt { color: var(--muted); font-size: 13px; }
+.sandbox-balance dd { margin: 0; overflow-wrap: anywhere; font-weight: 800; }
+.card-refresh { padding: 6px 10px; font-size: 12px; font-weight: 800; }
+.card-activity .row-value { white-space: normal; }
+.card-transaction-summary { display: grid; gap: 6px; font-size: 13px; }
+.card-transaction-summary time, .card-events time { color: var(--muted); font-size: 11px; }
+.card-events { list-style: none; padding: 0; margin: 18px 0 0; font-size: 13px; }
+.card-events li { padding: 10px 0; border-top: 1px solid var(--line); }
+.card-events li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px 10px; }
+.card-events p { margin-top: 5px; }
+.card-events .card-event-amounts { justify-content: flex-start; margin-top: 5px; color: var(--muted); }

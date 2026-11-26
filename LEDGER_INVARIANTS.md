@@ -14,4 +14,10 @@
 - Through the supported banking flows, funding increases posted and available balances, reservation moves available to reserved without moving posted funds, and settlement reduces posted and reserved. For those flows, posted equals available plus reserved. Raw ledger routes can post directly to backing accounts, and PostgreSQL enforces the journal rules without enforcing this product-level relationship.
 - Reservation commits with transfer creation. Local settlement commits with the settled status. The simulated bank commits one immutable receipt per transfer in a separate transaction, so a local settlement failure leaves the receipt available for retry. The retry checks the receipt's destination and amount. The next attempt time survives a settlement rollback and the worker can continue with other due transfers. These guarantees apply to the simulator.
 
+## Column sandbox cards
+
+- The card demo has its own USD balance at Column. Card holds, captures, reversals, and refunds surface as
+  provider activity. The supported card paths use the local database for resource mappings and issuance
+  state. Wizardric’s simulated checking balance and journals describe its own funding and outgoing payments.
+
 Enforcement is in [LedgerStore](src/main/java/bankledger/ledger/LedgerStore.java), [BankingStore](src/main/java/bankledger/banking/BankingStore.java), [SettlementStore](src/main/java/bankledger/banking/SettlementStore.java), and the [SQL migrations](src/main/resources/db/migrations). See [TESTING.md](TESTING.md) for evidence and [DATABASE.md](DATABASE.md) for transaction design.

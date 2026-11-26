@@ -52,7 +52,7 @@ class MigrationRunnerTest {
         runner.apply();
         runner.apply();
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5, 6);
         try (var connection = dataSource.getConnection(); var statement = connection.createStatement()) {
             connection.setAutoCommit(false);
             statement.executeUpdate("""
@@ -69,15 +69,15 @@ class MigrationRunnerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {3, 4})
-    void preservesPopulatedGoSchemas(int legacyVersion) throws Exception {
+    @ValueSource(ints = {3, 4, 5})
+    void preservesPopulatedSchemas(int legacyVersion) throws Exception {
         initializeLegacyDatabase(legacyVersion);
         var originalJournals = jdbc.queryForList(
                 "SELECT id, idempotency_key, encode(request_hash, 'hex') AS hash FROM journals ORDER BY id");
 
         runner.apply();
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5, 6);
         assertThat(jdbc.queryForList(
                 "SELECT id, idempotency_key, encode(request_hash, 'hex') AS hash FROM journals ORDER BY id"))
                 .isEqualTo(originalJournals);
@@ -113,7 +113,7 @@ class MigrationRunnerTest {
             second.get(15, TimeUnit.SECONDS);
         }
 
-        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5, 6);
     }
 
     @Test
@@ -128,7 +128,7 @@ class MigrationRunnerTest {
 
         jdbc.execute("DROP TABLE beneficiaries");
         runner.apply();
-        assertThat(versions()).containsExactly(1, 2, 3, 4, 5);
+        assertThat(versions()).containsExactly(1, 2, 3, 4, 5, 6);
     }
 
     private List<Integer> versions() {
@@ -136,7 +136,8 @@ class MigrationRunnerTest {
     }
 
     private void initializeLegacyDatabase(int version) throws Exception {
-        var files = List.of("001_ledger.sql", "002_reliability.sql", "003_banking.sql", "004_beneficiaries.sql");
+        var files = List.of("001_ledger.sql", "002_reliability.sql", "003_banking.sql", "004_beneficiaries.sql",
+                "005_settlement_retries.sql");
         try (var connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
             try (var statement = connection.createStatement();

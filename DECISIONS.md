@@ -19,3 +19,16 @@ A short claim transaction advances the transfer's retry time. If a worker exits 
 ## Preserve integer JSON across the dashboard boundary
 
 The API retains the numeric wire format inherited from Go. The dashboard uses [lossless-json](web/package.json) to decode integers before they pass through JavaScript `Number` and to write exact numeric tokens on requests and in browser storage. The existing storage keys still work. This also preserves the exact payment payload and key when a response is uncertain.
+
+
+## Reconcile Column card issuance through a durable claim
+
+The published Column idempotency list omits card and card-account creation. Wizardric sends a card create
+only from a newly committed claim and includes the claim reference in the card description. A later check
+adopts a result only when exactly one card has that reference under the mapped account and matches the
+person and program. This protects against duplicate issuance after a lost response at the cost of operator
+review if the original request never reached Column. [Column idempotency documentation](https://docs.column.com/working-with-the-api/idempotency/)
+
+Column owns the sandbox checking balance, holds, captures, reversals, and refunds for a card. Wizardric
+reads those facts through its mapping and uses its existing PostgreSQL journals for simulated checking
+and payments. Full card reveal, shared balances, and live issuing are deferred.

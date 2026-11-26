@@ -6,6 +6,7 @@ Wizardric is a local banking demo. React and TypeScript provide the dashboard. J
 | --- | --- |
 | Dashboard, payment form, and transaction details | [App.tsx](web/src/App.tsx) |
 | API calls, demo seeding, and history pagination | [bank.ts](web/src/bank.ts) |
+| Column sandbox cards | [Cards.tsx](web/src/Cards.tsx), [CardController](src/main/java/bankledger/cards/CardController.java), and [CardService](src/main/java/bankledger/cards/CardService.java) |
 | Exact USD parsing and formatting | [money.ts](web/src/money.ts) |
 | Routes, strict JSON decoding, and error responses | [ApiController](src/main/java/bankledger/http/ApiController.java), [ApiJson](src/main/java/bankledger/http/ApiJson.java), and [ApiErrors](src/main/java/bankledger/http/ApiErrors.java) |
 | Banking accounts, funding, beneficiaries, transfers, and timelines | [BankingStore](src/main/java/bankledger/banking/BankingStore.java) |
@@ -21,3 +22,20 @@ Wizardric is a local banking demo. React and TypeScript provide the dashboard. J
 4. While activity is pending, the dashboard refreshes history and balances. Transfer details derive a timeline from committed transfer, journal, and receipt rows in a single query. Journal details come from `/journals/{id}`. A confirmed receipt can appear while the transfer is still pending.
 
 History pages use descending transfer or beneficiary IDs and an exclusive `before_id` cursor. Each request reads its own current data. The API surface starts at `ApiController`, and [STATE.md](STATE.md) records current verification and limitations.
+
+
+## Follow a sandbox card
+
+1. The operator runs `column-provision` for an existing Wizardric account. [ColumnProvisioning](src/main/java/bankledger/cards/ColumnProvisioning.java)
+   checks for the platform root and creates the fictional cardholder and funding resources. [CardStore](src/main/java/bankledger/cards/CardStore.java)
+   saves the mapping. API startup and dashboard reads leave setup to this command.
+2. The Cards page requests issuance for the local account. The service takes an account-scoped command lock
+   and commits a unique claim before sending a card create to Column. The card description carries the claim
+   reference. With an uncertain response or after restart, a check lists cards under the mapped card account
+   and adopts a single verified match. An absent, ambiguous, or unverified match needs review.
+3. Pause and resume use the mapped card ID and the same command lock. A failed or uncertain status response
+   triggers a fresh provider read. The UI displays the last four digits and the status confirmed by Column.
+4. Column accepts one activity filter, so the list query specifies the mapped card ID. The detail query
+   uses a transaction ID and returns its events, including any decline reason. The Java service verifies
+   the card, card account, and program on every list row and detail before returning them. The sandbox
+   balance uses the mapped Column USD bank account.

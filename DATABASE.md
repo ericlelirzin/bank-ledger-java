@@ -9,6 +9,7 @@ PostgreSQL 17 and 18 are covered by the test matrix. The [migrations](src/main/r
 | [003 banking](src/main/resources/db/migrations/003_banking.sql) | Product accounts, outgoing transfers, and simulator receipts |
 | [004 beneficiaries](src/main/resources/db/migrations/004_beneficiaries.sql) | Immutable beneficiaries, account-scoped transfer reference, and transfer history index |
 | [005 settlement retries](src/main/resources/db/migrations/005_settlement_retries.sql) | Durable retry times and the due-transfer index |
+| [006 Column cards](src/main/resources/db/migrations/006_column_cards.sql) | Sandbox provider mappings, provisioning progress, and one durable issuance claim per account |
 
 ## Migrations
 
@@ -22,3 +23,18 @@ Preserve applied files and their order. For a schema change, add a forward SQL m
 - Each product account points to three backing accounts in `accounts`. Cash is an asset with debit normal side. Available and reserved are liabilities with credit normal side. All three disallow overdraft. The product account read joins all three balances in one query.
 - A short transaction claims the next due pending transfer by retry time and ID with `FOR UPDATE SKIP LOCKED`, then advances its retry time by five seconds. Rows already pending at upgrade are due immediately. A separate settlement transaction rechecks and locks the pending row. While it holds that lock, the simulated bank receipt uses its own transaction and connection. Budget two connections per active settlement. The settlement transaction posts the journal and records the final status together.
 - Transfers keep a destination snapshot. The composite foreign key constrains a saved beneficiary to the originating bank account. The nullable reference supports direct-destination transfers and rows from before migration 004.
+
+
+## Column sandbox transactions
+
+`CardStore.claimIssuance()` commits an insert with the local account as the primary key. Only the request
+that inserted the row sends a create to Column. `recordIssuance()` commits the verified Column card ID or a
+review state in a separate transaction. A crash between the two commits leaves a durable claim and reference
+for a later check. A claim persists even when a check finds no card.
+
+Provisioning, issuance, pause, and resume share a PostgreSQL session advisory lock on the negative local account ID.
+The lock uses an autocommit connection. Overlapping commands for that account receive a conflict. An
+issuance claim or result uses a second connection for its short transaction. Provisioning commits each step
+before the next provider write. At the funding step, a repeat command reads the existing Column bank
+account and creates the card account only after the expected wire is available. The repeat command
+does not send a new wire. Column HTTP calls run outside of PostgreSQL transactions.

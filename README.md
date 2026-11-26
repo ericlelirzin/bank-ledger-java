@@ -9,6 +9,7 @@ details show the settlement timeline and ledger entries.
 
 - [Banking](src/main/java/bankledger/banking) for accounts, payments, and settlement
 - [Ledger](src/main/java/bankledger/ledger) for journals and balances
+- [Cards](src/main/java/bankledger/cards) for Column sandbox provisioning, issuance, and activity
 - [HTTP API](src/main/java/bankledger/http) for routes and request handling
 - [Database migrations](src/main/resources/db/migrations) and [integration tests](src/test/java/bankledger)
 - [Engineering handoff](AGENTS.md), [current state](STATE.md), and [architecture](ARCHITECTURE.md)
@@ -50,6 +51,37 @@ SPRING_DATASOURCE_USERNAME=ledger \
 SPRING_DATASOURCE_PASSWORD=ledger \
 java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar migrate
 ```
+
+## Enable Column sandbox cards
+
+Use a private loopback API and dashboard. In the Column Dashboard, switch to sandbox and configure the
+platform root under **Entities → Root Entity**. Set the lowercase environment variable `column` to your sandbox key
+for the setup command and the API process. The Cards page shows the local demo account ID before setup.
+
+With the same datasource as the running API, run the explicit setup command for that account.
+
+```sh
+java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar column-provision ACCOUNT_ID
+```
+
+Setup creates a Visa debit program with just-in-time funding disabled, a fictional non-root person,
+a USD bank account funded with a simulated $1,000 wire, and a card account. If setup stops after a write,
+it records the step and known provider IDs in PostgreSQL. When the simulated wire is still settling,
+rerun setup to check the existing balance. Other incomplete steps require provider review before
+retrying. A repeat after successful setup reports the existing mapping.
+
+Start or restart the API with cards enabled, then run Vite on loopback.
+
+```sh
+SERVER_ADDRESS=127.0.0.1 WIZARDRIC_CARDS_ENABLED=true java -jar target/bank-ledger-java-0.1.0-SNAPSHOT.jar serve
+cd web
+npm run dev -- --host 127.0.0.1
+```
+
+In Cards, issue the virtual card, pause or resume it, and refresh after simulating transactions.
+**Check issuance** looks for the result of an existing claim. The Column balance and card activity
+come from the sandbox. The checking balance and payment journals come from Wizardric’s simulator.
+[Column sandbox card guide](https://docs.column.com/card-issuing/card-sandbox-simulation/)
 
 ## Develop and verify
 
